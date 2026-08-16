@@ -1,0 +1,116 @@
+name: Build NintendoSwitchPkg
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+# Cancel any in-progress run for the same ref to save CI minutes
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Firmware build (EDK2 / AArch64)
+    runs-on: ubuntu-22.04       # matches the Dockerfile base — keeps environment in sync
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0         # full history for git rev-parse in build stamp
+
+      # ── Pinned toolchain ────────────────────────────────────────────────────
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            gcc-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            python3 \
+            python3-distutils \
+            acpica-tools \
+            uuid-dev \
+            nasm \
+            iasl \
+            make \
+            bison \
+            flex \
+            libssl-dev
+
+      # ── Pinned EDK2 revision ───────────────────────────────────────────────
+      - name: Fetch EDK2 and submodules
+        run: |
+          EDK2_TAG=edk2-stable202108
+          git clone --branch "$EDK2_TAG" --depth 1 \
+            https://github.com/tianocore/edk2.git ../edk2
+          cd ../edk2
+          git submodule update --init --recursive -- \
+            MdePkg MdeModulePkg ArmPkg ArmPlatformPkg \
+            EmbeddedPkg NetworkPkg FatPkg BaseTools
+
+      # ── Build BaseTools ────────────────────────────────────────────────────
+      - name: Build EDK2 BaseTools
+        run: make -C ../edk2/BaseTools
+
+      # ── Stamp release info ─────────────────────────────────────────────────
+      - name: Write FwReleaseInfo.h
+        run: |
+          COMMIT=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
+          DATE=$(date +%m/%d/%Y)
+          printf '#ifndef __SMBIOS_RELEASE_INFO_H__\n#define __SMBIOS_RELEASE_INFO_H__\n#define __IMPL_COMMIT_ID__ "%s"\n#define __RELEASE_DATE__ "%s"\n#endif\n' \
+            "$COMMIT" "$DATE" > NintendoSwitchPkg/Include/FwReleaseInfo.h
+
+      # ── Build firmware ─────────────────────────────────────────────────────
+      - name: Build NintendoSwitchPkg
+        run: |
+          export PACKAGES_PATH="$(pwd)/../edk2:$(pwd)"
+          export WORKSPACE=$(pwd)/..
+          export GCC5_AARCH64_PREFIX=aarch64-linux-gnu-
+          source ../edk2/BaseTools/BuildEnv
+          cd ..
+          build -a AARCH64 \
+                -p NintendoSwitchPkg/NintendoSwitch.dsc \
+                -t GCC5
+
+      # ── Wrap ELF images ────────────────────────────────────────────────────
+      - name: Generate ELF wrapper images
+        run: |
+          LDSCRIPT="NintendoSwitchPkg/Tools/FvWrapper.ld"
+          find ../Build -name '*.fd' | while read fd; do
+            dir=$(dirname "$fd")/ELF
+            mkdir -p "$dir"
+            obj="$dir/FD.o"
+            elf="$dir/UEFI.elf"
+            aarch64-linux-gnu-objcopy -I binary -O elf64-littleaarch64 \
+              --binary-architecture aarch64 "$fd" "$obj"
+            aarch64-linux-gnu-ld -m aarch64linux "$obj" -T "$LDSCRIPT" -o "$elf"
+            rm -f "$obj"
+            echo "Generated: $elf"
+          done
+
+      # ── Collect artifacts ──────────────────────────────────────────────────
+      - name: Collect artifacts
+        run: |
+          mkdir -p out
+          find ../Build -name '*.fd' -exec cp {} out/ \;
+          find ../Build -name '*.elf' -exec cp {} out/ \;
+          echo "=== Artifacts ==="
+          ls -lh out/ || echo "(none)"
+          echo ""
+          echo "=== SHA-256 checksums ==="
+          sha256sum out/* 2>/dev/null || echo "(no artifacts)"
+
+      - name: Upload firmware artifacts
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: NintendoSwitchPkg-firmware-${{ github.sha }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: warn
