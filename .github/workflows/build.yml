@@ -50,20 +50,6 @@ jobs:
       - name: Build firmware via Docker (linux/amd64)
         run: make docker-build PLATFORM=linux/amd64
 
-      - name: Verify artifacts and checksums
-        run: |
-          test -s out/TEGRA210_EFI.fd  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }
-          test -s out/TEGRA210_EFI.elf || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }
-          test -s out/SHA256SUMS       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }
-          echo "=== Artifact listing ==="
-          ls -lh out/
-          echo ""
-          echo "=== SHA-256 checksums ==="
-          cat out/SHA256SUMS
-          echo ""
-          echo "=== Verifying checksums ==="
-          (cd out && sha256sum --check SHA256SUMS)
-
       - name: Upload firmware artifacts
         # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
@@ -92,20 +78,6 @@ jobs:
 
       - name: Build firmware via Docker (linux/arm64 under QEMU)
         run: make docker-build PLATFORM=linux/arm64
-
-      - name: Verify artifacts and checksums
-        run: |
-          test -s out/TEGRA210_EFI.fd  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }
-          test -s out/TEGRA210_EFI.elf || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }
-          test -s out/SHA256SUMS       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }
-          echo "=== Artifact listing ==="
-          ls -lh out/
-          echo ""
-          echo "=== SHA-256 checksums ==="
-          cat out/SHA256SUMS
-          echo ""
-          echo "=== Verifying checksums ==="
-          (cd out && sha256sum --check SHA256SUMS)
 
       - name: Upload firmware artifacts (arm64)
         # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA

@@ -76,7 +76,7 @@ docker-build: check-env
 	@rm -rf "$(OUT_DIR)" && mkdir -p "$(OUT_DIR)"
 	@set -eu; \
 	ID=$$(docker create --platform $(PLATFORM) $(IMAGE_NAME)); \
-	trap 'docker rm -f "$$ID" >/dev/null 2>&1 || true' EXIT; \
+	trap '[ -n "$$ID" ] && docker rm -f "$$ID" >/dev/null 2>&1 || true' EXIT; \
 	docker cp "$$ID:/build/out/." "$(OUT_DIR)/"; \
 	test -s "$(OUT_DIR)/TEGRA210_EFI.fd"   || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }; \
 	test -s "$(OUT_DIR)/TEGRA210_EFI.elf"  || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }; \
