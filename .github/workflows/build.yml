@@ -1,0 +1,96 @@
+name: Build NintendoSwitchPkg
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# Cancel any in-progress run for the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Static script checks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Syntax-check shell scripts
+        run: |
+          for f in scripts/fetch-deps.sh scripts/build.sh scripts/collect-artifacts.sh; do
+            echo "Checking $f ..."
+            bash -n "$f"
+          done
+          echo "All shell scripts pass syntax check."
+
+      - name: Validate Makefile (help target dry-run)
+        run: make help
+
+  build:
+    name: Firmware build (EDK2 / AArch64)
+    runs-on: ubuntu-22.04
+    needs: static-checks
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            gcc-aarch64-linux-gnu \
+            binutils-aarch64-linux-gnu \
+            python3 \
+            python3-distutils \
+            acpica-tools \
+            uuid-dev \
+            nasm \
+            make \
+            bison \
+            flex \
+            libssl-dev
+
+      - name: Fetch EDK2 and submodules
+        run: BUILD_ROOT="${GITHUB_WORKSPACE}/.." bash scripts/fetch-deps.sh
+
+      - name: Build NintendoSwitchPkg firmware
+        run: BUILD_ROOT="${GITHUB_WORKSPACE}/.." bash scripts/build.sh
+
+      - name: Collect artifacts and generate SHA256SUMS
+        run: |
+          BUILD_ROOT="${GITHUB_WORKSPACE}/.." \
+          OUT_DIR="${GITHUB_WORKSPACE}/out" \
+          bash scripts/collect-artifacts.sh
+
+      - name: Verify expected artifacts are present
+        run: |
+          if [ ! -f out/SHA256SUMS ]; then
+            echo "ERROR: out/SHA256SUMS is missing — build failed to produce artifacts."
+            exit 1
+          fi
+          echo "=== Artifact listing ==="
+          ls -lh out/
+          echo ""
+          echo "=== SHA-256 checksums ==="
+          cat out/SHA256SUMS
+
+      - name: Upload firmware artifacts
+        # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NintendoSwitchPkg-firmware-${{ github.sha }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
