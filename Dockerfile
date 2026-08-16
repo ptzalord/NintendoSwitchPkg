@@ -33,11 +33,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-distutils \
     # ACPI source language compiler (required for AcpiTables)
     acpica-tools \
-    # UUID generation (used by BaseTools)
-    uuid-dev \
-    # Additional build deps
-    nasm \
-    iasl \
     make \
     bison \
     flex \

@@ -87,7 +87,7 @@ jobs:
             elf="$dir/UEFI.elf"
             aarch64-linux-gnu-objcopy -I binary -O elf64-littleaarch64 \
               --binary-architecture aarch64 "$fd" "$obj"
-            aarch64-linux-gnu-ld -m aarch64elf "$obj" -T "$LDSCRIPT" -o "$elf"
+            aarch64-linux-gnu-ld -m aarch64linux "$obj" -T "$LDSCRIPT" -o "$elf"
             rm -f "$obj"
             echo "Generated: $elf"
           done

@@ -162,7 +162,7 @@ build: _check-linux-env
 	    "$$COMMIT" "$$DATE" > NintendoSwitchPkg/Include/FwReleaseInfo.h && \
 	  build -a AARCH64 -p NintendoSwitchPkg/NintendoSwitch.dsc -t GCC5
 	@echo "[build] Build complete."
-	@$(MAKE) -C NintendoSwitchPkg artifacts 2>/dev/null || true
+	@$(MAKE) artifacts 2>/dev/null || true
 
 ##
 ## artifacts — list and checksum build output
