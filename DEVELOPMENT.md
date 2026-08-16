@@ -121,8 +121,10 @@ make docker-build PLATFORM=linux/amd64
 make docker-build PLATFORM=linux/arm64
 ```
 
-> **Note:** Running `linux/arm64` on an Intel Mac requires Rosetta 2 emulation.
-> Enable it in Docker Desktop preferences ("Use Rosetta for x86/amd64 emulation").
+> **Note:** Running `linux/arm64` on an Intel Mac requires QEMU emulation
+> (provided by Docker Desktop's multi-platform support or `colima start --arch aarch64`).
+> Conversely, running `linux/amd64` on Apple Silicon uses Rosetta 2; enable
+> "Use Rosetta for x86/amd64 emulation" in Docker Desktop preferences.
 
 ### Platform support note
 
