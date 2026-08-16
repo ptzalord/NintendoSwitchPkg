@@ -1,0 +1,20 @@
+# Exclude local build output and fetched dependency trees from the Docker build context.
+# This prevents large directories from being copied during `docker build`.
+
+# Local build outputs
+out/
+Build/
+
+# Fetched dependency trees (EDK2 is cloned into the parent directory, not here,
+# but include common local names in case of manual clones nearby)
+edk2/
+
+# macOS filesystem metadata
+.DS_Store
+
+# Editor and IDE directories
+.vscode/
+.idea/
+
+# Git internals (Docker does not need these)
+.git/
