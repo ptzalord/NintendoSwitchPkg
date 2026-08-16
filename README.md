@@ -9,6 +9,10 @@
 git clone https://github.com/ptzalord/NintendoSwitchPkg.git
 cd NintendoSwitchPkg
 make docker-build        # requires Docker Desktop or Colima
+# Platform is auto-detected from the host architecture:
+#   Apple Silicon (arm64)  => linux/arm64
+#   Intel Mac (x86_64)     => linux/amd64
+# Override: make docker-build PLATFORM=linux/amd64
 ls out/                  # TEGRA210_EFI.fd  TEGRA210_EFI.elf  SHA256SUMS
 ```
 
