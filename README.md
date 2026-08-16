@@ -29,5 +29,23 @@ Plug in connector on the right-side Joy Con and connect to PC. Use WinDbg serial
 - Sideband buttons as input device
 - Joy-Con (maybe not. Need high speed serial)
 
-## Building
-See [Lumia950XLPkg](https://github.com/WOA-Project/Lumia950XLPkg). Almost identical!
+## Building (macOS — Docker Desktop or Colima)
+
+```sh
+# 1. Validate Docker is running
+make check-env
+
+# 2. Build (fetches EDK2 at pinned revision, compiles, emits artifacts)
+make docker-build
+
+# Artifacts land in:  out/
+# SHA-256 checksums are printed automatically.
+```
+
+Full environment setup, Apple Silicon notes, serial debugging, Windows
+kernel-debug configuration, eMMC safety policy, and a subsystem milestone
+matrix are documented in [DEVELOPMENT.md](DEVELOPMENT.md).
+
+For the historical Linux/PowerShell build path see `Tools/run-build.sh` and
+`Tools/edk2-build.ps1` (still functional but requires a pre-configured
+environment).
