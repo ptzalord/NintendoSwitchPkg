@@ -34,63 +34,85 @@ jobs:
       - name: Validate Makefile (help target dry-run)
         run: make help
 
-  build:
-    name: Firmware build (EDK2 / AArch64)
+  build-amd64:
+    name: Firmware build — Docker linux/amd64 (x64 runner, same path as Intel macOS)
     runs-on: ubuntu-22.04
     needs: static-checks
     steps:
       - name: Check out repository
         # actions/checkout v4.2.2 — pinned to immutable commit SHA
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
-        with:
-          fetch-depth: 0
 
-      - name: Install system dependencies
+      - name: Set up Docker Buildx
+        # docker/setup-buildx-action v3.10.0 — pinned to immutable commit SHA
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2
+
+      - name: Build firmware via Docker (linux/amd64)
+        run: make docker-build PLATFORM=linux/amd64
+
+      - name: Verify artifacts and checksums
         run: |
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            build-essential \
-            gcc-aarch64-linux-gnu \
-            binutils-aarch64-linux-gnu \
-            python3 \
-            python3-distutils \
-            acpica-tools \
-            uuid-dev \
-            nasm \
-            make \
-            bison \
-            flex \
-            libssl-dev
-
-      - name: Fetch EDK2 and submodules
-        run: BUILD_ROOT="${GITHUB_WORKSPACE}/.." bash scripts/fetch-deps.sh
-
-      - name: Build NintendoSwitchPkg firmware
-        run: BUILD_ROOT="${GITHUB_WORKSPACE}/.." bash scripts/build.sh
-
-      - name: Collect artifacts and generate SHA256SUMS
-        run: |
-          BUILD_ROOT="${GITHUB_WORKSPACE}/.." \
-          OUT_DIR="${GITHUB_WORKSPACE}/out" \
-          bash scripts/collect-artifacts.sh
-
-      - name: Verify expected artifacts are present
-        run: |
-          if [ ! -f out/SHA256SUMS ]; then
-            echo "ERROR: out/SHA256SUMS is missing — build failed to produce artifacts."
-            exit 1
-          fi
+          test -s out/TEGRA210_EFI.fd  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }
+          test -s out/TEGRA210_EFI.elf || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }
+          test -s out/SHA256SUMS       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }
           echo "=== Artifact listing ==="
           ls -lh out/
           echo ""
           echo "=== SHA-256 checksums ==="
           cat out/SHA256SUMS
+          echo ""
+          echo "=== Verifying checksums ==="
+          (cd out && sha256sum --check SHA256SUMS)
 
       - name: Upload firmware artifacts
         # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: NintendoSwitchPkg-firmware-${{ github.sha }}
+          name: NintendoSwitchPkg-firmware-amd64-${{ github.sha }}
           path: out/
           retention-days: 30
           if-no-files-found: error
+
+  build-arm64:
+    name: Firmware build — Docker linux/arm64 (QEMU, validates Apple Silicon path)
+    runs-on: ubuntu-22.04
+    needs: static-checks
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Set up QEMU for multi-platform builds
+        # docker/setup-qemu-action v3.6.0 — pinned to immutable commit SHA
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff9c45c9d8d2a71c771
+
+      - name: Set up Docker Buildx
+        # docker/setup-buildx-action v3.10.0 — pinned to immutable commit SHA
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2
+
+      - name: Build firmware via Docker (linux/arm64 under QEMU)
+        run: make docker-build PLATFORM=linux/arm64
+
+      - name: Verify artifacts and checksums
+        run: |
+          test -s out/TEGRA210_EFI.fd  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }
+          test -s out/TEGRA210_EFI.elf || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }
+          test -s out/SHA256SUMS       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }
+          echo "=== Artifact listing ==="
+          ls -lh out/
+          echo ""
+          echo "=== SHA-256 checksums ==="
+          cat out/SHA256SUMS
+          echo ""
+          echo "=== Verifying checksums ==="
+          (cd out && sha256sum --check SHA256SUMS)
+
+      - name: Upload firmware artifacts (arm64)
+        # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NintendoSwitchPkg-firmware-arm64-${{ github.sha }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
+

@@ -87,7 +87,9 @@ device by this author:
 git clone https://github.com/ptzalord/NintendoSwitchPkg.git
 cd NintendoSwitchPkg
 
-# 2. Build (Apple Silicon — native linux/arm64)
+# 2. Build — platform is auto-detected from the host CPU
+#    Apple Silicon (arm64/aarch64) → linux/arm64
+#    Intel/AMD     (x86_64/amd64)  → linux/amd64
 make docker-build
 
 # 3. Retrieve artifacts from out/
@@ -101,22 +103,22 @@ cat out/SHA256SUMS
 # Start Colima with ARM64 support
 colima start --arch aarch64 --cpu 4 --memory 8
 
-# Then build as usual
+# Then build as usual (auto-detected as linux/arm64)
 make docker-build
 ```
 
-### Intel Mac or forcing amd64
+### Intel Mac or forcing a specific platform
 
-If you need `linux/amd64` (e.g. an amd64-specific dependency is confirmed in
-future work), pass:
+`make docker-build` auto-detects the platform from `uname -m`.  To override:
 
 ```sh
 make docker-build PLATFORM=linux/amd64
+make docker-build PLATFORM=linux/arm64
 ```
 
-> **Note:** amd64 emulation on Apple Silicon requires Rosetta 2 to be enabled
-> in Docker Desktop preferences ("Use Rosetta for x86/amd64 emulation").
-> Native `linux/arm64` is preferred and is the default.
+> **Note:** `linux/arm64` emulation on Intel requires QEMU; the build will be
+> slower than running natively on Apple Silicon.  `linux/amd64` emulation on
+> Apple Silicon requires Rosetta 2 to be enabled in Docker Desktop preferences.
 
 ### Platform support note
 
@@ -124,6 +126,9 @@ The build container itself targets AArch64 cross-compilation for the firmware
 regardless of host architecture.  Both `linux/amd64` and `linux/arm64` host
 images should produce identical firmware `.fd` output because the compiler
 (`gcc-aarch64-linux-gnu`) targets the same output architecture.
+
+The CI workflow validates both platforms on every PR: `linux/amd64` on the
+standard x64 GitHub-hosted runner, and `linux/arm64` under QEMU/buildx.
 
 ---
 
