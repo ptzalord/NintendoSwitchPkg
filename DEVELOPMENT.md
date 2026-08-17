@@ -142,7 +142,7 @@ images produce identical firmware `.fd` output because the compiler
 | Component | Pinned to | Immutable? |
 |---|---|---|
 | Ubuntu base image | `ubuntu:22.04@sha256:149d67e29f765f4db62aa52161009e99e389544e25a8f43c8c89d4a445a7ca37` | ✅ digest-pinned |
-| EDK2 | commit `ba91d0292e593df8528b66f99c1b0b14fadc8e16` (tag `edk2-stable202108`) | ✅ commit-pinned |
+| EDK2 | commit `7b4a99be8a39c12d3a7fc4b8db9f0eab4ac688d5` (tag `edk2-stable202108`; commit SHA is the source of truth, tag kept for release context) | ✅ commit-pinned |
 | APT packages | Ubuntu 22.04 repo versions at image-build time | ⚠️ **Not independently pinned** |
 
 **APT package version limitation:** `gcc-aarch64-linux-gnu`, `acpica-tools`,
@@ -161,7 +161,9 @@ make  bison  flex  libssl-dev
 ```
 
 `acpica-tools` provides the `iasl` ACPI compiler.  There is no separate `iasl`
-package on Ubuntu 22.04.
+package on Ubuntu 22.04.  The pinned EDK2 commit SHA above is the immutable
+dependency reference used by `scripts/fetch-deps.sh`; the release tag is
+documented only to show which upstream stable release that commit belongs to.
 
 PowerShell is **not** installed in the container.  The upstream
 `Tools/edk2-build.ps1` script is present in the repository for reference but

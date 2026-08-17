@@ -25,11 +25,14 @@ jobs:
 
       - name: Syntax-check shell scripts
         run: |
-          for f in scripts/fetch-deps.sh scripts/build.sh scripts/collect-artifacts.sh; do
+          for f in scripts/*.sh; do
             echo "Checking $f ..."
             bash -n "$f"
           done
           echo "All shell scripts pass syntax check."
+
+      - name: Validate pinned EDK2 revision metadata
+        run: bash scripts/validate-edk2-pin.sh
 
       - name: Validate Makefile (help target dry-run)
         run: make help
@@ -104,4 +107,3 @@ jobs:
             .
         env:
           DOCKER_BUILDKIT: "1"
-

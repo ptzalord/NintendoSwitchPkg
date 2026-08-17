@@ -25,9 +25,11 @@ REPO_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 BUILD_ROOT="${BUILD_ROOT:-$(cd "${REPO_DIR}/.." && pwd)}"
 EDK2_DIR="${EDK2_DIR:-${BUILD_ROOT}/edk2}"
 
-# Immutable commit SHA for the edk2-stable202108 release tag.
+# Immutable commit SHA for the edk2-stable202108 release.
+# EDK2_COMMIT is the source of truth; EDK2_TAG is retained only as
+# human-readable release context for the initial clone command.
 # Verify with: git -C <edk2-clone> rev-parse edk2-stable202108
-EDK2_COMMIT="ba91d0292e593df8528b66f99c1b0b14fadc8e16"
+EDK2_COMMIT="7b4a99be8a39c12d3a7fc4b8db9f0eab4ac688d5"
 EDK2_TAG="edk2-stable202108"
 
 echo "[fetch-deps] EDK2 target: ${EDK2_TAG} (${EDK2_COMMIT})"
