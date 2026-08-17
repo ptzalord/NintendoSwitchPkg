@@ -1,33 +1,47 @@
 # EDK2 Implementation for Nintendo Switch (Tegra210)
 
-## Status
-Capable to boot something from SD card. If you have a Linux kernel with EFI stub support, supply the device tree for any Tegra210 device (not limited to Nintendo Switch) should boot.
+> **Fork of [`imbushuo/NintendoSwitchPkg`](https://github.com/imbushuo/NintendoSwitchPkg)**
+> — early research prototype, last upstream activity March 2021.
 
-ACPI also boots Windows and Linux, but limited devices are provided (only CPU at this moment).
+## Quick-Start (macOS)
+
+```sh
+git clone https://github.com/ptzalord/NintendoSwitchPkg.git
+cd NintendoSwitchPkg
+make docker-build        # requires Docker Desktop or Colima
+# Platform is auto-detected from the host architecture:
+#   Apple Silicon (arm64)  => linux/arm64
+#   Intel Mac (x86_64)     => linux/amd64
+# Override: make docker-build PLATFORM=linux/amd64
+ls out/                  # TEGRA210_EFI.fd  TEGRA210_EFI.elf  SHA256SUMS
+```
+
+See **[DEVELOPMENT.md](DEVELOPMENT.md)** for full build instructions, Colima
+setup, dependency pinning details, subsystem status, and the eMMC safety policy.
+
+## Status (upstream, unverified in this fork unless noted)
+
+- Capable of booting Linux EFI-stub images from microSD.
+- Windows 10 ARM64 boot manager reached under ACPI (CPU topology only).
+- Screen/framebuffer requires Coreboot pre-initialisation.
+- UART on right Joy-Con connector (115200 8N1).
+
+## eMMC Safety
+
+**No eMMC write path exists in this repository.**  Generated firmware is
+development firmware for non-destructive boot path testing only.
+See [DEVELOPMENT.md §7](DEVELOPMENT.md#7-emmc-safety-policy) for the full policy.
 
 ## Device Support
-- CPU services: GIC and Arch Timer.
-- Clocks (reset, PLL, etc.)
-- Power Management (PMC, PMIC & regulators, etc.)
-- GPIO and Pin Multiplexor.
-- MicroSD (should support SDSC, HC. XC probed and have partition table shown, but not intensively tested). eMMC support will be added soon.
-- Screen and FrameBuffer (need special [Coreboot](https://github.com/imbushuo/Coreboot))
-- Side-band buttons, not yet registered as EFI Input Device.
-- UART (Right Joy Con, 115200, 8n1)
 
-## Windows Kernel Debugger Enablement
-
-    bcdedit /store E:\EFI\Microsoft\Boot\BCD /set {default} debug on
-    bcdedit /store E:\EFI\Microsoft\Boot\BCD /dbgsettings serial debugport:1 baudrate:115200
-    
-Plug in connector on the right-side Joy Con and connect to PC. Use WinDbg serial connection and it should work.
-
-## Planned / In-Progress
-
-- EHCI USB host
-- eMMC
-- Sideband buttons as input device
-- Joy-Con (maybe not. Need high speed serial)
+See [DEVELOPMENT.md §6](DEVELOPMENT.md#6-subsystem-milestone-matrix) for the
+full milestone matrix with verified/unverified/planned status for each subsystem.
 
 ## Building
-See [Lumia950XLPkg](https://github.com/WOA-Project/Lumia950XLPkg). Almost identical!
+
+See [DEVELOPMENT.md](DEVELOPMENT.md).
+
+## License
+
+See [LICENSE](LICENSE).
+

@@ -1,0 +1,107 @@
+name: Build NintendoSwitchPkg
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+# Cancel any in-progress run for the same ref to save CI minutes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  static-checks:
+    name: Static script checks
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+
+      - name: Syntax-check shell scripts
+        run: |
+          for f in scripts/fetch-deps.sh scripts/build.sh scripts/collect-artifacts.sh; do
+            echo "Checking $f ..."
+            bash -n "$f"
+          done
+          echo "All shell scripts pass syntax check."
+
+      - name: Validate Makefile (help target dry-run)
+        run: make help
+
+  build:
+    name: Firmware build — x86_64 Docker (linux/amd64)
+    runs-on: ubuntu-22.04
+    needs: static-checks
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up Docker Buildx
+        # docker/setup-buildx-action v3.10.0 — pinned to immutable commit SHA
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2
+
+      - name: Build firmware image (same Docker path used by macOS developers)
+        run: make docker-build PLATFORM=linux/amd64
+
+      - name: Verify artifacts and checksums
+        run: |
+          echo "=== Artifact listing ==="
+          ls -lh out/
+          echo ""
+          test -s out/TEGRA210_EFI.fd  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }
+          test -s out/TEGRA210_EFI.elf || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }
+          test -s out/SHA256SUMS       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }
+          echo "=== SHA-256 verification ==="
+          (cd out && sha256sum --check SHA256SUMS)
+
+      - name: Upload firmware artifacts
+        # actions/upload-artifact v4.6.2 — pinned to immutable commit SHA
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: NintendoSwitchPkg-firmware-${{ github.sha }}
+          path: out/
+          retention-days: 30
+          if-no-files-found: error
+
+  build-arm64:
+    name: ARM64 Docker image build (linux/arm64 via QEMU)
+    runs-on: ubuntu-22.04
+    needs: static-checks
+    steps:
+      - name: Check out repository
+        # actions/checkout v4.2.2 — pinned to immutable commit SHA
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          fetch-depth: 0
+
+      - name: Set up QEMU for multi-platform builds
+        # docker/setup-qemu-action v3.6.0 — pinned to immutable commit SHA
+        uses: docker/setup-qemu-action@29109295f81e9208d7d86ff1c6c12d2833863392
+
+      - name: Set up Docker Buildx
+        # docker/setup-buildx-action v3.10.0 — pinned to immutable commit SHA
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2
+
+      - name: Build linux/arm64 Docker image (validates Apple Silicon path)
+        # Build only — artifact extraction from a QEMU-emulated arm64 image is
+        # slow and not practical in CI; the amd64 job already validates artifacts.
+        # A successful image build confirms the Dockerfile and build scripts
+        # work on the arm64 platform used by Apple Silicon Macs.
+        run: |
+          docker buildx build \
+            --platform linux/arm64 \
+            --tag switch-edk2:arm64 \
+            --load \
+            .
+        env:
+          DOCKER_BUILDKIT: "1"
+

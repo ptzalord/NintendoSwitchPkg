@@ -2,3 +2,13 @@ Include/FwReleaseInfo.h
 Tools/grubaa64.efi
 AcpiTables/T114Ref.asl
 .vscode
+
+# Local build output and artifact collection
+out/
+Build/
+
+# macOS filesystem metadata
+.DS_Store
+
+# Fetched dependency trees (edk2 is cloned as a sibling directory and cannot
+# be excluded via .gitignore path patterns; see DEVELOPMENT.md §3 for details)
