@@ -76,7 +76,7 @@ docker-build: check-env
 	test -s "$(OUT_DIR)/TEGRA210_EFI.fd"  || { echo "ERROR: TEGRA210_EFI.fd missing or empty"; exit 1; }; \
 	test -s "$(OUT_DIR)/TEGRA210_EFI.elf" || { echo "ERROR: TEGRA210_EFI.elf missing or empty"; exit 1; }; \
 	test -s "$(OUT_DIR)/SHA256SUMS"       || { echo "ERROR: SHA256SUMS missing or empty"; exit 1; }; \
-	(cd "$(OUT_DIR)" && sha256sum --check SHA256SUMS)
+	bash scripts/verify-checksums.sh "$(OUT_DIR)"
 	@echo ""
 	@echo "[docker-build] Artifacts written to $(OUT_DIR)/"
 	@ls -lh "$(OUT_DIR)/"
